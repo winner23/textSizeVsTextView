@@ -10,92 +10,75 @@ import UIKit
 
 class ViewController: UIViewController {
 
-    @IBOutlet weak var textView: UITextView!
-    @IBOutlet weak var visableButton: UIButton!
-    @IBOutlet weak var indicatorHeight: NSLayoutConstraint!
-    @IBOutlet weak var indicatorTop: NSLayoutConstraint!
-    @IBOutlet weak var attrIndicatorHeight: NSLayoutConstraint!
-    @IBOutlet weak var attrIndicatorTop: NSLayoutConstraint!
 
-    @IBOutlet weak var label: UILabel!
-    @IBOutlet weak var attrLaberlHeight: NSLayoutConstraint!
-    @IBOutlet weak var labelHeight: NSLayoutConstraint!
-    
+    @IBOutlet weak var scrollingView: UIScrollView!
+    @IBOutlet weak var pageControll: UIPageControl!
     
     override func viewDidLoad() {
+        
         super.viewDidLoad()
-        visableButton.isHidden = true
         
+        // we will set the contentSize after determining how many pages get filled with text
+        //scrollingView.contentSize = CGSize(width: CGFloat((view.bounds.size.width - 20) * pageNumber), height: CGFloat(view.bounds.size.height - 20))
+        
+        scrollingView.isPagingEnabled = true
+        
+        let textString = "NOW, what I want is, Facts.  Teach these boys and girls nothing but Facts.  Facts alone are wanted in life.  Plant nothing else, and root out everything else.  You can only form the minds of reasoning animals upon Facts: nothing else will ever be of any service to them.  This is the principle on which I bring up my own children, and this is the principle on which I bring up these children.  Stick to Facts, sir!’ The scene was a plain, bare, monotonous vault of a school-room, and the speaker’s square forefinger emphasized his observations by underscoring every sentence with a line on the schoolmaster’s sleeve.  The emphasis was helped by the speaker’s square wall of a forehead, which had his eyebrows for its base, while his eyes found commodious cellarage in two dark caves, overshadowed by the wall.  The emphasis was helped by the speaker’s mouth, which was wide, thin, and hard set.  The emphasis was helped by the speaker’s voice, which was inflexible, dry, and dictatorial.  The emphasis was helped by the speaker’s hair, which bristled on the skirts of his bald head, a plantation of firs to keep the wind from its shining surface, all covered with knobs, like the crust of a plum pie, as if the head had scarcely warehouse-room for the hard facts stored inside.  The speaker’s obstinate carriage, square coat, square legs, square shoulders,—nay, his very neckcloth, trained to take him by the throat with an unaccommodating grasp, like a stubborn fact, as it was,—all helped the emphasis. ‘In this life, we want nothing but Facts, sir; nothing but Facts!’ The speaker, and the schoolmaster, and the third grown person present, all backed a little, and swept with their eyes the inclined plane of little vessels then and there arranged in order, ready to have imperial gallons of facts poured into them until they were full to the brim."
+        
+        let textStorage = NSTextStorage(string: textString)
+        let textLayout = NSLayoutManager()
+        textStorage.addLayoutManager(textLayout)
+//        textLayout.delegate = self
+        scrollingView.delegate = self
+        var r = CGRect(x: 0, y: 0, width: scrollingView.frame.size.width, height: scrollingView.frame.size.height)
+        
+        var i: Int = 0
+        
+        // this is what we'll use to track the "progress" of filling the "screens of textviews"
+        // each time through, we'll get the last Glyph rendered...
+        // if it's equal to the total number of Glyphs, we know we're done
+        var lastRenderedGlyph = 0
+        
+        while lastRenderedGlyph < textLayout.numberOfGlyphs {
+            
+            let textContainer = NSTextContainer(size: scrollingView.frame.size)
+            textLayout.addTextContainer(textContainer)
+            
+            let textView = UITextView(frame: r, textContainer: textContainer)
+            
+            r.origin.x += r.width
+            
+            textView.font = .systemFont(ofSize: 14)
+            
+            textView.tag = i
+            
+            i += 1
+            
+            scrollingView.addSubview(textView)
+            
+            // get the last Glyph rendered into the current textContainer
+            lastRenderedGlyph = NSMaxRange(textLayout.glyphRange(for: textContainer))
+            
+        }
+        
+        // use the last textView rect to set contentSize
+        scrollingView.contentSize = CGSize(width: r.origin.x, height: r.size.height)
+        
+        pageControll.numberOfPages = i
+        pageControll.currentPage = 0
+        print("Actual number of pages =", i)
     }
-    @IBAction func largeTextButtonTouched(_ sender: UIButton) {
-        let text = "Lorem ipsum dolor sit er elit lamet, consectetaur cillium adipisicing pecu, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Nam liber te conscient to factor tum poen legum odioque civiuda."
 
-//        let font = textView.font
-        
-        let strokeTextAttributes: [NSAttributedStringKey: Any] = [
-            .strokeColor : UIColor.blue,
-            .foregroundColor : UIColor.cyan,
-            .strokeWidth : -2.0,
-            .font : UIFont.boldSystemFont(ofSize: 14)
-        ]
-        let attributedText = NSAttributedString(string: text, attributes: strokeTextAttributes)
-        textView.attributedText = attributedText
-        label.attributedText = attributedText
-        visableButton.isHidden = fitText(text, textView)
+}
+extension ViewController: UIScrollViewDelegate {
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        let value = scrollView.contentOffset.x / scrollView.frame.size.width
+        pageControll.currentPage = Int(round(value))
+        print(pageControll.currentPage)
     }
-    @IBAction func smallTextButtonTouched(_ sender: UIButton) {
-        let text = "Lorem ipsum dolor sit er elit lamet, consectetaur cillium adipisicing pecu, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-        let strokeTextAttributes: [NSAttributedStringKey: Any] = [
-            .strokeColor : UIColor.blue,
-            .foregroundColor : UIColor.cyan,
-            .strokeWidth : -2.0,
-            .font : UIFont.boldSystemFont(ofSize: 12)
-        ]
-        let attributedText = NSAttributedString(string: text, attributes: strokeTextAttributes)
-        textView.attributedText = attributedText
-        label.attributedText = attributedText
-        visableButton.isHidden = fitText(text, textView)
-    }
-    
-    func fitText(_ text: String, _ textView: UITextView) -> Bool {
-        var result: Bool = false
-        let textViewContentSize = textView.contentSize
-        print("textViewContentSize: \(textViewContentSize)")
-        let attributes = textView.textContainer.size
-        
-        let insetsTextView = textView.textContainerInset
-        let constraintRect = CGSize(width: attributes.width,
-                                    height: CGFloat.greatestFiniteMagnitude)
-        
-        let rect = textView.attributedText.boundingRect(with: constraintRect,
-                                         options: [.usesFontLeading, .usesLineFragmentOrigin, .truncatesLastVisibleLine],
-//                                         attributes: textView.attributedText.attributes(at: 0, effectiveRange: nil),
-                                         context: nil)
+}
 
-        attrIndicatorTop.constant = textView.frame.origin.y - insetsTextView.top
-        
-        attrIndicatorHeight.constant = ceil(rect.height)
-
-        print("textView.textContainer.size: \(attributes)")
-        print("attrText: \(rect)")
-        
-        let textRectSize = textView.text.boundingRect(with: constraintRect,
-                                             options: [.usesLineFragmentOrigin, .usesFontLeading, .truncatesLastVisibleLine],
-//                                             attributes: [NSFontAttributeName: font],
-                                             context: nil)
-        print("Text: \(textRectSize)")
-        indicatorHeight.constant = ceil(textRectSize.height)
-        indicatorTop.constant = textView.frame.origin.y - insetsTextView.top
-        
-        print("label.bounds.height: \(label.bounds.height)")
-        print("preferredMaxLayoutWidth: \(label.preferredMaxLayoutWidth)")
-        let neededSize = label.sizeThatFits(CGSize(width: label.bounds.width, height: CGFloat.greatestFiniteMagnitude))
-        print("neededSize: \(neededSize.height)")
-        result = textRectSize.height < textViewContentSize.height
-        return result
-    }
-    
-    
-
+extension ViewController: UIPageViewControllerDelegate {
+    valuech
 }
 
